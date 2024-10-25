@@ -1,0 +1,16 @@
+FROM alpine:3.20.3 AS builder
+
+RUN apk add --no-cache openjdk17-jre && \
+    addgroup -g 1000 -S hello && \
+    adduser -u 1000 -G hello -D hello
+
+WORKDIR /app
+COPY ./target/*.jar /app/app.jar
+
+RUN chown hello /app/app.jar
+
+USER hello
+
+EXPOSE 8080
+
+CMD java -Djava.security.egd=file:/dev/./urandom -jar /app/app.jar

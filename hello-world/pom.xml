@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.benjamin-barbe.hello-world</groupId>
+    <artifactId>hello-world</artifactId>
+    <version>1.0</version>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.5</version> <!-- lookup parent from repository -->
+    </parent>
+
+    <description>Hello World app</description>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Open api configuration -->
+        <springdoc.version>2.0.4</springdoc.version>
+        <openapi.spec.version>1.0.0</openapi.spec.version>
+        <openapi.spec.filename>hello-world_${openapi.spec.version}.yaml</openapi.spec.filename>
+        <openapi.miscroservice.base.package>com.benjamin_barbe.hello_world</openapi.miscroservice.base.package>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.0.4</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                            <goal>build-info</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <version>6.4.0</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.basedir}/src/main/resources/openapi/${openapi.spec.filename}</inputSpec>
+                            <generatorName>spring</generatorName>
+                            <library>spring-boot</library>
+                            <generateApis>true</generateApis>
+                            <!-- Plugin does not generate test: https://github.com/OpenAPITools/openapi-generator/issues/3318 -->
+                            <generateApiTests>false</generateApiTests>
+                            <!-- done with springdoc -->
+                            <generateApiDocumentation>false</generateApiDocumentation>
+                            <generateModels>true</generateModels>
+                            <!-- Same as generateApiTest -->
+                            <generateModelTests>false</generateModelTests>
+                            <!-- done with springdoc -->
+                            <generateModelDocumentation>false</generateModelDocumentation>
+                            <supportingFilesToGenerate>ApiUtil.java</supportingFilesToGenerate>
+                            <apiPackage>${openapi.miscroservice.base.package}.generated</apiPackage>
+                            <modelPackage>${openapi.miscroservice.base.package}.generated.dto</modelPackage>
+                            <configOptions>
+                                <!-- See:
+                                    https://openapi-generator.tech/docs/generators/java
+                                    https://openapi-generator.tech/docs/generators/spring/
+                                -->
+                                <interfaceOnly>false</interfaceOnly>
+                                <delegatePattern>true</delegatePattern>
+                                <openApiNullable>false</openApiNullable>
+                                <dateLibrary>java8</dateLibrary>
+                                <library>spring-boot</library>
+                                <!-- add new validation support -->
+                                <useSpringBoot3>true</useSpringBoot3>
+                            </configOptions>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -1,0 +1,54 @@
+### builder stage ###
+FROM alpine:3.20.3 AS builder
+
+RUN apk add --no-cache openjdk17-jdk
+
+COPY ./target/*.jar /app/app.jar
+
+RUN mkdir /app/unpacked && \
+    unzip /app/app.jar -d /app/unpacked && \
+    jdeps \
+    --ignore-missing-deps \
+    -q \
+    --recursive \
+    --multi-release 17 \
+    --print-module-deps \
+    --class-path="/app/unpacked/BOOT-INF/lib/*" \
+    /app/app.jar > /app/dependencies.info && \
+    rm -rf /app/unpacked
+
+RUN jlink --verbose \
+    --compress 2 \
+    --strip-java-debug-attributes \
+    --no-header-files \
+    --no-man-pages \
+    --output /jre \
+    --add-modules $(cat /app/dependencies.info)
+
+RUN cd /app && \
+    java -Djarmode=layertools -jar app.jar extract
+
+### app stage ###
+FROM alpine:3.20.3
+
+ENV JAVA_HOME=/jre
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
+
+RUN addgroup -g 1000 -S hello && \
+    adduser -u 1000 -G hello -D hello && \
+    mkdir /app && \
+    chown -R hello /app
+
+COPY --from=builder /jre $JAVA_HOME
+COPY --from=builder /app/dependencies/ /app/
+COPY --from=builder /app/snapshot-dependencies/ /app/
+COPY --from=builder /app/spring-boot-loader/ /app/
+COPY --from=builder /app/application/ /app/
+
+USER hello
+
+WORKDIR /app
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]

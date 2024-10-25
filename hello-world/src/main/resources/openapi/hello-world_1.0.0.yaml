@@ -1,0 +1,44 @@
+# ---------------------------------------------------------------------------------
+# -- Informations document                                                       --
+# ---------------------------------------------------------------------------------
+# Version 3.1.0 not supported yet
+openapi: 3.0.3
+
+info:
+  title: Swagger - OpenAPI 3.0.3 - Infoter2 Tiers Business
+  version: 1.0.0
+  description: Hello World spec
+    - [https://spec.openapis.org/oas/v3.0.3](https://spec.openapis.org/oas/v3.0.3)
+    - [https://swagger.io/specification/v3/](https://swagger.io/specification/v3/)
+
+servers:
+  - url: /api
+
+tags:
+  - name: Hello
+  - name: Relations
+
+# ---------------------------------------------------------------------------------
+# -- Déclaration des endpoints                                                   --
+# ---------------------------------------------------------------------------------
+paths:
+  /hello/{name}:
+    parameters:
+      - name: name
+        in: path
+        description: Name of the user
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Greets the user
+      tags:
+        - Hello
+      operationId: greetUser
+      responses:
+        200:
+          description: User greeted
+          content:
+            text/plain:
+              schema:
+                type: string
