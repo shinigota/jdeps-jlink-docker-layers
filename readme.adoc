@@ -277,13 +277,44 @@ L'empreinte totale reste la même, la différence est que les images docker suiv
 
 image::img/dockerfile-jre-slim-size.png[]
 
-== Remarques
+== Garbage Collector
 
-* Le build multi stage et les layers Spring reposent en grande partie sur les layers Docker :
-** Le poids total de l'image est réduit
-** Les layers sont réutilisés
-** *La taille du cache de build Docker augmente de manière conséquente*
+=== Impact de l'utilisation de layers
 
-Il existe un https://docs.docker.com/build/cache/garbage-collection/[Garbage Collector pour le cache]
+Sur la machine de build, Docker utilise du stockage pour son cache de build :
+
+* Les layers y sont stockés (qu'ils soient sur des stages intermédiaires ou finaux)
+* Le build est KO si le cache est plein
+
+Deux solutions :
+
+* `cron` avec un  `docker builder prune` : pas optimal, supprime tout le cache
+* https://docs.docker.com/build/cache/garbage-collection/[Garbage Collector] : supprimer intelligemment les layers moins utilisés
+
+=== Mise en place
+Nécessite d'utiliser Buildkit comme backend : par défaut depuis Docker 23
+[source, yaml]
+----
+{
+  ...
+  "features": { "buildkit": true },
+  "builder":
+    {
+      "gc":
+        {
+          "enabled": true,
+          "defaultKeepStorage": "20GB",
+          "policy":
+            [
+              { "keepStorage": "20GB", "filter": ["unused-for=168h"] },
+              { "keepStorage": "30GB", "filter": ["unused-for=72h"] },
+              { "keepStorage": "40GB", "filter": ["unused-for=24h"] },
+              { "keepStorage": "50GB", "filter": ["unused-for=12h"] },
+              { "keepStorage": "60GB", "all": true },
+            ],
+        },
+    },
+}
+----
 
 == Questions ?
