@@ -312,7 +312,8 @@ Deux solutions :
 
 === Mise en place
 
-Nécessite d'utiliser Buildkit comme backend : par défaut depuis Docker 23
+`/etc/docker/daemon.json` :
+
 [source, yaml]
 ----
 {
@@ -336,9 +337,9 @@ Nécessite d'utiliser Buildkit comme backend : par défaut depuis Docker 23
 }
 ----
 
-== Réflection
+== Réflexion
 
-Si le JRE custom créé par Jdeps et Jlink ne contient que les modules utilisés par l'applicaiton, quid de ceux appelés par réflection ?
+Si le JRE custom créé par Jdeps et Jlink ne contient que les modules utilisés par l'application, quid de ceux appelés par réflexion ?
 
 === Test blanc
 
@@ -380,9 +381,9 @@ response = {
 }
 ----
 
-=== Version reflection
+=== Version réflexion
 
-Le code est migré (en partie) vers de la réflection : pas d'`import` explicique de `java.net.http` :
+Le code est migré (en partie) vers de la réflexion : pas d'`import` explicite de `java.net.http` :
 [source, java]
 ----
 Object httpClient = Class.forName("java.net.http.HttpClient")
