@@ -1,4 +1,5 @@
 = Optimiser les images docker avec JLink et les layers
+// :revealjs_customtheme: https://raw.githubusercontent.com/joshed-io/revealjs-themes/refs/heads/master/css/theme/robot-lung.css
 
 == Généralités et rappels
 
@@ -144,6 +145,9 @@ Résultat, image bien plus légère.
 
 image::img/dockerfile-jre-slim-size.png[]
 
+[%step]
+image::https://media1.tenor.com/m/bHIe_ab5YQMAAAAd/woohoo-homer-simpson.gif[woohoo,height=200]
+
 == Layers
 === Layer Docker
 * Un layer est une commande modifiant le FS de l'image
@@ -155,10 +159,22 @@ image::img/dockerfile-jre-slim-size.png[]
 === Layer Docker
 image::img/docker-layer.png[]
 
+[.columns]
 === Layer Docker
+
+
+[.column.is-two-thirds]
+--
 Dans un build multi stage, les layers sont indépendants d'un stage à l'autre.
 
 image::img/docker-layer-multi-stage.png[]
+--
+
+[.column]
+--
+[%step]
+image::https://media1.tenor.com/m/mX58EIkHyskAAAAd/jenga-fail.gif[jenga,height=200,align="center"]
+--
 
 === Layer Docker
 * Dans un registry, en réalité, on ne pousse pas une image docker entière, mais seulement ses layers.
@@ -286,18 +302,21 @@ Sur la machine de build, Docker utilise du stockage pour son cache de build :
 * Les layers y sont stockés (qu'ils soient sur des stages intermédiaires ou finaux)
 * Le build est KO si le cache est plein
 
+[%step]
+--
 Deux solutions :
 
 * `cron` avec un  `docker builder prune` : pas optimal, supprime tout le cache
 * https://docs.docker.com/build/cache/garbage-collection/[Garbage Collector] : supprimer intelligemment les layers moins utilisés
+--
 
 === Mise en place
+
 Nécessite d'utiliser Buildkit comme backend : par défaut depuis Docker 23
 [source, yaml]
 ----
 {
   ...
-  "features": { "buildkit": true },
   "builder":
     {
       "gc":
@@ -317,4 +336,108 @@ Nécessite d'utiliser Buildkit comme backend : par défaut depuis Docker 23
 }
 ----
 
-== Questions ?
+== Réflection
+
+Si le JRE custom créé par Jdeps et Jlink ne contient que les modules utilisés par l'applicaiton, quid de ceux appelés par réflection ?
+
+=== Test blanc
+
+Cas d'utilisation simple, du `HttpClient`, appartenant au module `java.net.http` :
+
+[source, java]
+----
+HttpClient client = HttpClient.newHttpClient();
+
+HttpRequest request = HttpRequest.newBuilder()
+        .uri(new URI("https://postman-echo.com/get"))
+        .GET()
+        .build();
+
+HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+System.out.println("response = " + response.body());
+----
+
+Jdeps détecte bien le module :
+----
+java.base,java.net.http
+----
+
+Lors du lancement, le JRE créé par Jlink fonctionne très bien :
+----
+response = {
+  "args": {},
+  "headers": {
+    "host": "postman-echo.com",
+    "x-request-start": "t1733479815.018",
+    "connection": "close",
+    "x-forwarded-proto": "https",
+    "x-forwarded-port": "443",
+    "x-amzn-trace-id": "Root=1-6752cd87-12aedaff052000e13ab6c01b",
+    "user-agent": "Java-http-client/17.0.6"
+  },
+  "url": "https://postman-echo.com/get"
+}
+----
+
+=== Version reflection
+
+Le code est migré (en partie) vers de la réflection : pas d'`import` explicique de `java.net.http` :
+[source, java]
+----
+Object httpClient = Class.forName("java.net.http.HttpClient")
+        .getDeclaredMethod("newHttpClient")
+        .invoke(null);
+
+Class<?> uriClazz = Class.forName("java.net.URI");
+Constructor<?> uriConstructor = uriClazz.getConstructor(String.class);
+Object uri = uriConstructor.newInstance("https://postman-echo.com/get");
+
+Object request = Class.forName("java.net.http.HttpRequest")
+        .getDeclaredMethod("newBuilder")
+        .invoke(null);
+
+request = request.getClass()
+        .getDeclaredMethod("uri", Class.forName("java.net.URI"))
+        .invoke(request, uri);
+
+// ...
+----
+
+Donc Jdeps ne détecte pas le module :
+----
+java.base
+----
+
+Inévitablement, l'application avec son JRE custom ne fonctionne pas !
+----
+Exception in thread "main" java.lang.RuntimeException: java.lang.ClassNotFoundException: java.net.http.HttpClient
+	at com.benjamin_barbe.App.main(App.java:50)
+Caused by: java.lang.ClassNotFoundException: java.net.http.HttpClient
+	at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(Unknown Source)
+	at java.base/jdk.internal.loader.ClassLoaders$AppClassLoader.loadClass(Unknown Source)
+	at java.base/java.lang.ClassLoader.loadClass(Unknown Source)
+	at java.base/java.lang.Class.forName0(Native Method)
+	at java.base/java.lang.Class.forName(Unknown Source)
+	at com.benjamin_barbe.App.main(App.java:23)
+----
+
+== Conclusion
+
+Pour optimiser nos images docker, plusieurs axes :
+
+[%step]
+* Jdeps et Jlink pour utiliser un JRE custom : réduire la taille des images
+* Utiliser les layers : ne réduit pas la taille des images, mais privilégie la réutilisation et le rebuild "intelligent"
+
+[%step]
+Impacts :
+
+[%step]
+* L'empreinte des images docker sera considérablement réduite
+* Le stockage utilisé sur la machine de build sera considérablement augmenté
+
+[%step]
+Il faut utiliser le garbage collector !
+
+== Merci !
