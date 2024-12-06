@@ -1,4 +1,4 @@
-FROM alpine:3.20.3 AS builder
+FROM alpine:3.20.3
 
 RUN apk add --no-cache openjdk17-jre && \
     addgroup -g 1000 -S hello && \

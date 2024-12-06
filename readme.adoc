@@ -74,7 +74,7 @@ On initialise un stage _builder_ :
 
 [source, dockerfile]
 ----
-FROM alpine:3.20.3
+FROM alpine:3.20.3 as builder
 
 RUN apk add --no-cache openjdk17-jdk
 ----
@@ -150,10 +150,10 @@ image::https://media1.tenor.com/m/bHIe_ab5YQMAAAAd/woohoo-homer-simpson.gif[wooh
 
 == Layers
 === Layer Docker
-* Un layer est une commande modifiant le FS de l'image
+* Un layer est une instruction modifiant le contenu de l'image
 * Un layer est mis en cache, en local et sur le registry. Si une image utilise un même layer, il ne sera pas rebuildé
-* Les layers suivants dépendent des layers précédents
 * Si un layer est invalidé, il est rebuildé
+* Les layers suivants dépendent des layers précédents
 * Si un layer est invalidé, les layers suivants le sont aussi
 
 === Layer Docker
